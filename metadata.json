@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Admin Panel for Zone Communications",
+  "description": "An administration panel for a web application that allows Zone Commanders (comzone) to submit the number of messages sent and received from stations under their command. The super admin can manage zones, stations, and users.",
+  "requestFramePermissions": []
+}
