@@ -50,8 +50,8 @@ const App: React.FC = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // --- DATA FETCHING ---
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
     setConnectionError(null);
     try {
         const data = await api.getInitialData();
@@ -60,9 +60,9 @@ const App: React.FC = () => {
         setStations(data.stations);
         setStats(data.stats);
     } catch (err: any) {
-        setConnectionError(err.message || "Impossible de charger les données initiales.");
+        if (!silent) setConnectionError(err.message || "Impossible de charger les données initiales.");
     } finally {
-        setIsLoading(false);
+        if (!silent) setIsLoading(false);
     }
   }, []);
 
@@ -154,8 +154,7 @@ const App: React.FC = () => {
   const handleDeleteZone = async (zoneId: string) => {
     try {
       await api.deleteZone(zoneId);
-      // Re-fetch data as this can have cascading effects
-      fetchData();
+      await fetchData(true);
       addAlert(`Zone supprimée.`);
     } catch (err: any) {
       addAlert(err.message, 'error');
@@ -183,11 +182,20 @@ const App: React.FC = () => {
   };
   
   const handleDeleteStation = async (stationId: string) => {
-     if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette station ?")) return;
     try {
-      await api.deleteStation(stationId);
-      setStations(prev => prev.filter(s => s.id !== stationId));
-      addAlert(`Station supprimée.`);
+      const updated = await api.deleteStation(stationId);
+      setStations(prev => prev.map(s => s.id === updated.id ? updated : s));
+      addAlert(`Station mise à la corbeille.`);
+    } catch (err: any) {
+      addAlert(err.message, 'error');
+    }
+  };
+
+  const handleRestoreStation = async (stationId: string) => {
+    try {
+      const updated = await api.restoreStation(stationId);
+      setStations(prev => prev.map(s => s.id === updated.id ? updated : s));
+      addAlert(`Station restaurée.`);
     } catch (err: any) {
       addAlert(err.message, 'error');
     }
@@ -217,15 +225,24 @@ const App: React.FC = () => {
       if (!currentUser) {
         return <Login onLogin={handleLogin} />;
       }
-    
+
+      const trashZoneIds = new Set(zones.filter(z => z.isTrash).map(z => z.id));
+      const activeStations = stations.filter(s => !s.isDeleted && !trashZoneIds.has(s.zoneId));
+      const deletedStations = stations.filter(s => s.isDeleted === true || trashZoneIds.has(s.zoneId));
+      const activeStationIds = new Set(activeStations.map(s => s.id));
+      const activeZones = zones.filter(z => !z.isTrash);
+      const activeStats = stats.filter(s => activeStationIds.has(s.stationId));
+
       if (currentUser.role === UserRole.SUPER_ADMIN) {
         return <SuperAdminDashboard
           currentUser={currentUser}
           onLogout={handleLogout}
           users={users}
           zones={zones}
-          stations={stations}
-          stats={stats}
+          activeZones={activeZones}
+          stations={activeStations}
+          deletedStations={deletedStations}
+          stats={activeStats}
           onAddUser={handleAddUser}
           onUpdateUser={handleUpdateUser}
           onDeleteUser={handleDeleteUser}
@@ -235,13 +252,14 @@ const App: React.FC = () => {
           onAddStation={handleAddStation}
           onUpdateStation={handleUpdateStation}
           onDeleteStation={handleDeleteStation}
-          onRefreshStats={fetchData}
+          onRestoreStation={handleRestoreStation}
+          onRefreshStats={() => fetchData(true)}
         />;
       }
-    
+
       if (currentUser.role === UserRole.COMZONE) {
         const userZone = zones.find(z => z.id === currentUser.zoneId);
-        const userStations = stations.filter(s => s.zoneId === currentUser.zoneId);
+        const userStations = activeStations.filter(s => s.zoneId === currentUser.zoneId);
         const userStats = stats.filter(s => s.zoneId === currentUser.zoneId);
     
         return <ComzoneDashboard

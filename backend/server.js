@@ -99,21 +99,23 @@ apiRouter.get('/initial-data', async (req, res) => {
     }
    
     try {
-        const zonesResult = await db.query('SELECT zone_id, zone_name FROM public.zones');
+        const zonesResult = await db.query('SELECT zone_id, zone_name, COALESCE(is_trash, FALSE) as is_trash FROM public.zones');
         results.zones = zonesResult.rows.map(z => ({
             id: z.zone_id.toString(),
             name: z.zone_name,
+            isTrash: z.is_trash,
         }));
     } catch (err) {
         console.error("Erreur lors de la récupération des zones:", err.message);
     }
    
     try {
-        const stationsResult = await db.query('SELECT station_id, station_name, zone_id FROM public.stations');
+        const stationsResult = await db.query('SELECT station_id, station_name, zone_id, COALESCE(is_deleted, FALSE) as is_deleted FROM public.stations');
         results.stations = stationsResult.rows.map(s => ({
             id: s.station_id.toString(),
             name: s.station_name,
             zoneId: s.zone_id.toString(),
+            isDeleted: s.is_deleted,
         }));
     } catch (err) {
         console.error("Erreur lors de la récupération des stations:", err.message);
@@ -121,15 +123,15 @@ apiRouter.get('/initial-data', async (req, res) => {
 
     try {
         const statsQuery = `
-            SELECT 
-                s.id, 
-                TO_CHAR(s.date AT TIME ZONE $1, 'YYYY-MM-DD') as date, 
-                s.messages_received, 
-                s.messages_sent, 
-                s.station_id, 
+            SELECT
+                s.id,
+                TO_CHAR(s.date AT TIME ZONE $1, 'YYYY-MM-DD') as date,
+                s.messages_received,
+                s.messages_sent,
+                s.station_id,
                 st.zone_id
             FROM public.message_statistics s
-            JOIN public.stations st ON s.station_id = st.station_id
+            JOIN public.stations st ON s.station_id = st.station_id AND COALESCE(st.is_deleted, FALSE) = FALSE
         `;
         const statsResult = await db.query(statsQuery, [TIMEZONE]);
         results.stats = statsResult.rows.map(s => ({
@@ -149,10 +151,11 @@ apiRouter.get('/initial-data', async (req, res) => {
 
 apiRouter.get('/zones', async (req, res) => {
     try {
-        const zonesResult = await db.query('SELECT zone_id, zone_name FROM public.zones');
+        const zonesResult = await db.query('SELECT zone_id, zone_name, COALESCE(is_trash, FALSE) as is_trash FROM public.zones');
         res.json(zonesResult.rows.map(z => ({
             id: z.zone_id.toString(),
             name: z.zone_name,
+            isTrash: z.is_trash,
         })));
     } catch (err) {
         console.error("Erreur lors de la récupération des zones:", err.message);
@@ -268,13 +271,17 @@ apiRouter.post('/zones', async (req, res) => {
 
 apiRouter.put('/zones/:id', async (req, res) => {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, isTrash } = req.body;
     try {
-        const result = await db.query('UPDATE public.zones SET zone_name = $1 WHERE zone_id = $2 RETURNING zone_id, zone_name', [name, id]);
+        const result = await db.query(
+            'UPDATE public.zones SET zone_name = $1, is_trash = $2 WHERE zone_id = $3 RETURNING zone_id, zone_name, COALESCE(is_trash, FALSE) as is_trash',
+            [name, isTrash === true, id]
+        );
         if (result.rows.length === 0) {
             return res.status(404).json({ message: "Zone non trouvée" });
         }
-        res.json({ id: result.rows[0].zone_id.toString(), name: result.rows[0].zone_name });
+        const z = result.rows[0];
+        res.json({ id: z.zone_id.toString(), name: z.zone_name, isTrash: z.is_trash });
     } catch (err) {
         console.error("Erreur lors de la mise à jour de la zone:", err);
         res.status(500).json({ message: "Erreur serveur: " + err.message });
@@ -285,7 +292,7 @@ apiRouter.delete('/zones/:id', async (req, res) => {
     const { id } = req.params;
     try {
         await db.query('BEGIN');
-        await db.query('DELETE FROM public.stations WHERE zone_id = $1', [id]);
+        await db.query('UPDATE public.stations SET is_deleted = TRUE WHERE zone_id = $1', [id]);
         await db.query('DELETE FROM public.zones WHERE zone_id = $1', [id]);
         await db.query('COMMIT');
         res.status(204).send();
@@ -334,13 +341,35 @@ apiRouter.put('/stations/:id', async (req, res) => {
 apiRouter.delete('/stations/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        const result = await db.query('DELETE FROM public.stations WHERE station_id = $1', [id]);
+        const result = await db.query(
+            'UPDATE public.stations SET is_deleted = TRUE WHERE station_id = $1 RETURNING station_id, station_name, zone_id',
+            [id]
+        );
         if (result.rowCount === 0) {
             return res.status(404).json({ message: "Station non trouvée" });
         }
-        res.status(204).send();
+        const s = result.rows[0];
+        res.json({ id: s.station_id.toString(), name: s.station_name, zoneId: s.zone_id.toString(), isDeleted: true });
     } catch (err) {
-        console.error("Erreur lors de la suppression de la station:", err);
+        console.error("Erreur lors de la mise à la corbeille de la station:", err);
+        res.status(500).json({ message: "Erreur serveur: " + err.message });
+    }
+});
+
+apiRouter.put('/stations/:id/restore', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query(
+            'UPDATE public.stations SET is_deleted = FALSE WHERE station_id = $1 RETURNING station_id, station_name, zone_id',
+            [id]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: "Station non trouvée" });
+        }
+        const s = result.rows[0];
+        res.json({ id: s.station_id.toString(), name: s.station_name, zoneId: s.zone_id.toString(), isDeleted: false });
+    } catch (err) {
+        console.error("Erreur lors de la restauration de la station:", err);
         res.status(500).json({ message: "Erreur serveur: " + err.message });
     }
 });
@@ -351,15 +380,15 @@ apiRouter.get('/stats', async (req, res) => {
     const { startDate, endDate } = req.query;
     try {
         let query = `
-            SELECT 
-                s.id, 
-                TO_CHAR(s.date AT TIME ZONE $1, 'YYYY-MM-DD') as date, 
-                s.messages_received, 
-                s.messages_sent, 
-                s.station_id, 
+            SELECT
+                s.id,
+                TO_CHAR(s.date AT TIME ZONE $1, 'YYYY-MM-DD') as date,
+                s.messages_received,
+                s.messages_sent,
+                s.station_id,
                 st.zone_id
             FROM public.message_statistics s
-            JOIN public.stations st ON s.station_id = st.station_id
+            JOIN public.stations st ON s.station_id = st.station_id AND COALESCE(st.is_deleted, FALSE) = FALSE
         `;
         const params = [TIMEZONE];
         const conditions = [];
@@ -440,16 +469,33 @@ app.get('*', (req, res) => {
 
 
 // --- START SERVER ---
-app.listen(PORT, async () => {
+async function startServer() {
   try {
-    const password = 'password';
-    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    await db.query('UPDATE public.users SET password_hash = $1 WHERE username = $2', [passwordHash, 'superadmin']);
-    console.log(`\n[INFO] Le mot de passe pour l'utilisateur 'superadmin' a été réinitialisé à : "${password}"`);
-    console.log(`       Utilisez ces identifiants pour la première connexion.`);
+    await db.query('ALTER TABLE public.stations ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE');
+    console.log('\n[INFO] Migration: colonne is_deleted vérifiée sur public.stations.');
   } catch (err) {
-    console.error("\n[AVERTISSEMENT] Impossible de réinitialiser automatiquement le mot de passe du superadmin. L'utilisateur n'existe peut-être pas encore.", err.message);
+    console.error('\n[AVERTISSEMENT] Migration is_deleted impossible:', err.message);
   }
-  console.log(`\n✅ Serveur backend démarré et à l'écoute sur http://localhost:${PORT}`);
-  console.log(`   L'application complète (frontend + backend) est servie depuis cette adresse.`);
-});
+  try {
+    await db.query('ALTER TABLE public.zones ADD COLUMN IF NOT EXISTS is_trash BOOLEAN DEFAULT FALSE');
+    console.log('\n[INFO] Migration: colonne is_trash vérifiée sur public.zones.');
+  } catch (err) {
+    console.error('\n[AVERTISSEMENT] Migration is_trash impossible:', err.message);
+  }
+
+  app.listen(PORT, async () => {
+    try {
+      const password = 'password';
+      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+      await db.query('UPDATE public.users SET password_hash = $1 WHERE username = $2', [passwordHash, 'superadmin']);
+      console.log(`\n[INFO] Le mot de passe pour l'utilisateur 'superadmin' a été réinitialisé à : "${password}"`);
+      console.log(`       Utilisez ces identifiants pour la première connexion.`);
+    } catch (err) {
+      console.error("\n[AVERTISSEMENT] Impossible de réinitialiser automatiquement le mot de passe du superadmin. L'utilisateur n'existe peut-être pas encore.", err.message);
+    }
+    console.log(`\n✅ Serveur backend démarré et à l'écoute sur http://localhost:${PORT}`);
+    console.log(`   L'application complète (frontend + backend) est servie depuis cette adresse.`);
+  });
+}
+
+startServer();

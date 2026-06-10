@@ -78,14 +78,14 @@ const ComzoneDashboard: React.FC<ComzoneDashboardProps> = ({ currentUser, onLogo
       <Header currentUser={currentUser} onLogout={onLogout} />
       <main className="flex-1">
         <div className="container px-4 py-8 mx-auto sm:px-6 lg:px-8">
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-xl font-bold text-gray-900 sm:text-2xl lg:text-3xl">
                 Tableau de Bord - Zone {zone?.name || 'Non Assignée'}
             </h1>
             <p className="mt-1 text-gray-600">
                 Soumettez et consultez les statistiques de trafic pour votre zone.
             </p>
 
-            <div className="grid grid-cols-1 gap-8 mt-8 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-8 mt-8 md:grid-cols-3">
                 {/* Submission Form */}
                 <div className="lg:col-span-1">
                     <div className="p-6 bg-white rounded-lg shadow">

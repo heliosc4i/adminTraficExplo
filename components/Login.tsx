@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { EyeIcon, EyeOffIcon } from './Icons';
+import logoUrl from '../logo.png';
 
 interface LoginProps {
   onLogin: (credentials: { username: string, password?: string }) => Promise<string | null>;
@@ -50,11 +51,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-gradient-to-br from-navy-800 to-navy-900">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-2xl">
         <div className="text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16 mx-auto text-navy-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-            </svg>
+            <img
+                src={logoUrl}
+                alt="Helios C4I"
+                className="h-24 mx-auto object-contain"
+            />
             <h1 className="mt-4 text-3xl font-bold tracking-tight text-navy-800">
-                Helios C4I - TraficExplo
+                Admin - TraficExplo
             </h1>
             <p className="mt-2 text-sm text-gray-600">
                 Connectez-vous pour accéder à votre tableau de bord

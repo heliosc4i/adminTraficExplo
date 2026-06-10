@@ -53,8 +53,8 @@ const Header: React.FC<{
           className="flex items-center text-left focus:outline-none"
         >
           <div className="mr-3 text-right">
-            <p className="text-sm font-medium text-gray-800">{currentUser.name}</p>
-            <p className="text-xs text-gray-500">{currentUser.role}</p>
+            <p className="text-sm font-medium text-gray-800 truncate max-w-[120px] sm:max-w-xs">{currentUser.name}</p>
+            <p className="hidden text-xs text-gray-500 sm:block">{currentUser.role}</p>
           </div>
           <UserCircleIcon />
         </button>

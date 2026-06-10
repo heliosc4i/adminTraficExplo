@@ -116,8 +116,12 @@ export const updateStation = async (station: Station): Promise<Station> => {
     return apiRequest(`/stations/${station.id}`, { method: 'PUT', body: JSON.stringify(station) });
 };
 
-export const deleteStation = async (stationId: string): Promise<void> => {
-    await apiRequest(`/stations/${stationId}`, { method: 'DELETE' });
+export const deleteStation = async (stationId: string): Promise<Station> => {
+    return apiRequest(`/stations/${stationId}`, { method: 'DELETE' });
+};
+
+export const restoreStation = async (stationId: string): Promise<Station> => {
+    return apiRequest(`/stations/${stationId}/restore`, { method: 'PUT' });
 };
 
 // --- STATS MANAGEMENT ---

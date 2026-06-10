@@ -131,7 +131,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, zones, onAddUser
   return (
     <div>
       <div className="flex flex-col items-start gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-3xl font-bold text-gray-800">Gestion des Utilisateurs</h2>
+        <h2 className="text-xl font-bold text-gray-800 sm:text-2xl lg:text-3xl">Gestion des Utilisateurs</h2>
         <button onClick={() => openModal()} className="inline-flex items-center px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md shadow-sm bg-navy-600 hover:bg-navy-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-500">
           <PlusIcon />
           Ajouter un Utilisateur
@@ -169,31 +169,31 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, zones, onAddUser
             <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
                 <tr>
-                <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Utilisateur</th>
-                <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Matricule & Grade</th>
-                <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Email</th>
-                <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Rôle</th>
-                <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Zone</th>
-                <th className="px-6 py-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase">Actions</th>
+                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Utilisateur</th>
+                <th className="hidden px-4 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase sm:table-cell">Matricule & Grade</th>
+                <th className="hidden px-4 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase lg:table-cell">Email</th>
+                <th className="hidden px-4 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase md:table-cell">Rôle</th>
+                <th className="hidden px-4 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase md:table-cell">Zone</th>
+                <th className="px-4 py-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase">Actions</th>
                 </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedUsers.map(user => (
                 <tr key={user.id}>
-                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                         <div className="font-medium text-gray-900">{user.name}</div>
                         <div className="text-gray-500">@{user.username}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                    <td className="hidden px-4 py-3 text-sm text-gray-500 whitespace-nowrap sm:table-cell">
                         <div className="font-medium text-gray-900">{user.id}</div>
                         <div className="text-gray-500">{user.grade}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                    <td className="hidden px-4 py-3 text-sm text-gray-500 whitespace-nowrap lg:table-cell">
                         <div>{user.email}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{user.role}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{zones.find(z => z.id === user.zoneId)?.name || 'N/A'}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
+                    <td className="hidden px-4 py-3 text-sm text-gray-500 whitespace-nowrap md:table-cell">{user.role}</td>
+                    <td className="hidden px-4 py-3 text-sm text-gray-500 whitespace-nowrap md:table-cell">{zones.find(z => z.id === user.zoneId)?.name || 'N/A'}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-right whitespace-nowrap">
                     <button onClick={() => openResetPasswordModal(user)} className="p-2 text-yellow-600 rounded-full hover:bg-yellow-100" title="Réinitialiser le mot de passe"><KeyIcon/></button>
                     <button onClick={() => openModal(user)} className="p-2 ml-2 text-indigo-600 rounded-full hover:bg-indigo-100" title="Modifier"><PencilIcon/></button>
                     {user.role !== UserRole.SUPER_ADMIN && (

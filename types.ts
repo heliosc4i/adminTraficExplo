@@ -17,12 +17,14 @@ export interface User {
 export interface Zone {
   id: string;
   name: string;
+  isTrash?: boolean;
 }
 
 export interface Station {
   id: string;
   name: string;
   zoneId: string;
+  isDeleted?: boolean;
 }
 
 export interface MessageStats {

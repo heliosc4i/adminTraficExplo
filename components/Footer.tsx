@@ -7,7 +7,7 @@ const Footer: React.FC = () => {
         © {new Date().getFullYear()} HeliosC4I.cm | Tous droits réservés.
       </p>
       <p className="mt-1 text-xs text-navy-700 font-semibold tracking-wide">
-        Officier d'élite du digital.
+        Oscar d'élite du digital.
       </p>
     </footer>
   );
